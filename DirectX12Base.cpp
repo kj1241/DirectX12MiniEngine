@@ -62,18 +62,18 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
     *ppAdapter = nullptr; // 어댑터 포인트 초기화
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<IDXGIFactory6> factory6;
-    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6))))
+    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6)))) //팩토리에서 
     {
         for (
-            UINT adapterIndex = 0;
-            SUCCEEDED(factory6->EnumAdapterByGpuPreference(
-                adapterIndex,
-                requestHighPerformanceAdapter == true ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED,
-                IID_PPV_ARGS(&adapter)));
-            ++adapterIndex)
+            UINT adapterIndex = 0;  // 어뎁터 인덱스 번호 시작
+            SUCCEEDED(factory6->EnumAdapterByGpuPreference(  //어뎁터 그룹 열거
+                adapterIndex,  // 만약 그 인덱스 번호를 넣고 
+                requestHighPerformanceAdapter == true ? DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE : DXGI_GPU_PREFERENCE_UNSPECIFIED, // 높은 퍼포먼의 어뎁터가 존재하면  높은순대로 정렬 없으면 없다고 표현
+                IID_PPV_ARGS(&adapter))); //어뎁터 주소 가저온다.
+            ++adapterIndex) //어뎁터 번호 증가
         {
-            DXGI_ADAPTER_DESC1 desc;
-            adapter->GetDesc1(&desc);
+            DXGI_ADAPTER_DESC1 desc; //비디오 카드 
+            adapter->GetDesc1(&desc); //어뎁터 주소로 비디오 카드 가저오기
 
             if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
             {
@@ -90,7 +90,7 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
         }
     }
 
-    if (adapter.Get() == nullptr)
+    if (adapter.Get() == nullptr) //어뎁터가
     {
         for (UINT adapterIndex = 0; SUCCEEDED(pFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex)
         {
