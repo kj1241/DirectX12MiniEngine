@@ -62,7 +62,7 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
     *ppAdapter = nullptr; // 어댑터 포인트 초기화
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<IDXGIFactory6> factory6;
-    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6)))) //팩토리에서 
+    if (SUCCEEDED(pFactory->8(IID_PPV_ARGS(&factory6)))) //팩토리에서 6버전을 지원하는지 검사
     {
         for (
             UINT adapterIndex = 0;  // 어뎁터 인덱스 번호 시작
@@ -75,14 +75,14 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
             DXGI_ADAPTER_DESC1 desc; //비디오 카드 
             adapter->GetDesc1(&desc); //어뎁터 주소로 비디오 카드 가저오기
 
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) // 소프트웨어라면  넘어가고
             {
                 // 기본 랜더 드라이버 어뎁터 선택 x
                 // 소프트웨어 어뎁터가 필요하면 /warp 명령을 보냄
                 continue;
             }
 
-            // 어뎁터가 directx12 지원하는지 확인 실제 장치라 생성 x
+            // 하드웨어 어뎁터가 directx12 지원하는지 확인 실제 장치라 생성 x
             if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
             {
                 break;
@@ -97,14 +97,14 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
             DXGI_ADAPTER_DESC1 desc;
             adapter->GetDesc1(&desc);
 
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) //소프트웨어 어뎁터면 넘어감
             {
                 // 기본 랜더 드라이버 어뎁터 선택 x
                 // 소프트웨어 어뎁터가 필요하면 /warp 명령을 보냄
                 continue;
             }
 
-            // 어뎁터가 directx12 지원하는지 확인 실제 장치라 생성 x
+            // 하드웨어 어뎁터가 directx12 지원하는지 확인 실제 장치라 생성 x
             if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
             {
                 break;
@@ -116,6 +116,6 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
 
 void DirectX12Base::SetCustomWindowText(LPCWSTR text) //윈도우 상태표시창 표현
 {
-	std::wstring windowText = directX12_title + L": " + text;
-	SetWindowText(WinAPI::GetHwnd(), windowText.c_str());
+	std::wstring windowText = directX12_title + L": " + text;  //유니코드
+	SetWindowText(WinAPI::GetHwnd(), windowText.c_str()); // 핸들값으로 윈도우 설정하기
 }
