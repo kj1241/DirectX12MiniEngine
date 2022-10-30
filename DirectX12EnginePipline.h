@@ -37,8 +37,8 @@ private:
     //싱글톤
     static DirectX12EnginePipline* s_app;
 
-    void LoadPipeline();
-    void LoadAssets();
-    void PopulateCommandList();
-    void WaitForPreviousFrame();
+    void LoadPipeline();  //파이프라인 로드
+    void LoadAssets();  //파이프라인 에셋
+    void PopulateCommandList(); // 커멘드 리스트 마들기
+    void WaitForPreviousFrame(); //이전 프레임 대기(나중에 지울꺼)
 };

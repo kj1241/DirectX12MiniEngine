@@ -1,25 +1,29 @@
 #include "stdafx.h"
 #include "DirectX12EnginePipline.h"
 
+//생성자
 DirectX12EnginePipline::DirectX12EnginePipline(UINT width, UINT height, std::wstring name):DirectX12Base(width, height, name),directX12_frameIndex(0),directX12_rtvDescriptorSize(0), directX12_fenceValue(0)
 {
-
 }
 
+//소멸자
 DirectX12EnginePipline::~DirectX12EnginePipline()
 {
 }
 
+//초기화
 void DirectX12EnginePipline::OnInit()
 {
-	LoadPipeline();
-	LoadAssets();
+	LoadPipeline(); //파이프라인 로드
+	LoadAssets(); //에셋 로드
 }
 
+//업데이트
 void DirectX12EnginePipline::OnUpdate()
 {
 }
 
+//랜더링
 void DirectX12EnginePipline::OnRender()
 {
     //장면을 랜더링하는데 필요한 모든 명령 목록을 기록
@@ -42,9 +46,9 @@ void DirectX12EnginePipline::OnDestroy()
     CloseHandle(directX12_fenceEvent);
 }
 
-void DirectX12EnginePipline::LoadPipeline()
+void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
 {
-    UINT dxgiFactoryFlags = 0;
+    UINT dxgiFactoryFlags = 0; //dxgi 팩토리 플레그
 
 #if defined(_DEBUG) || defined(_DEBUG) 
     // 디버그 레이어 활설 (앱 및 기능/선택적 기능/그래픽도구)
@@ -53,22 +57,20 @@ void DirectX12EnginePipline::LoadPipeline()
         ComPtr<ID3D12Debug> debugController; //디버그 컨트롤러
         if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
         {
-            debugController->EnableDebugLayer();
+            debugController->EnableDebugLayer(); //디버깅 레이어 활성
             dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG; //추가 디버그 레이어 활설
         }
     }
 #endif
   
-   
-
-    ComPtr<IDXGIFactory4> factory;
+    ComPtr<IDXGIFactory4> factory; //팩토리
     //ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
-    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+    ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory))); //팩토리 만들기 dxgi.dll 가저오기
 
     if (directX12_useWarpDevice) //WARP 장치로 대체합니다.
     {
-        ComPtr<IDXGIAdapter> warpAdapter;
-        ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+        ComPtr<IDXGIAdapter> warpAdapter; // 레스터라이즈 Windows Advanced Rasterization Platform 세이더 기반 렌더링
+        ThrowIfFailed(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter))); //어뎁터
 
         // 하드웨어 장치 및 시도
         ThrowIfFailed(D3D12CreateDevice(
@@ -80,7 +82,7 @@ void DirectX12EnginePipline::LoadPipeline()
     else //아니면 하드웨어 장비로 대체
     {
         ComPtr<IDXGIAdapter1> hardwareAdapter;
-        GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+        GetHardwareAdapter(factory.Get(), &hardwareAdapter); //하드웨어 어뎁터
 
         ThrowIfFailed(D3D12CreateDevice(
             hardwareAdapter.Get(),
@@ -96,11 +98,12 @@ void DirectX12EnginePipline::LoadPipeline()
     ThrowIfFailed(directX12_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&directX12_commandQueue)));
 
     //스왑 체인을 정의하고 생성
-    ComPtr<IDXGISwapChain1> swapChain;
+    ComPtr<IDXGISwapChain1> swapChain; 
     swapChain.Reset(); //기본쓰레기 값이 들어가 있는경우도 있어서 리셋한번 해줌
 
+    //스왑체인 정의
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
+    swapChainDesc.BufferCount = FrameCount;  //버퍼 갯수
     swapChainDesc.Width = directX12_width;
     swapChainDesc.Height = directX12_height;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -122,10 +125,10 @@ void DirectX12EnginePipline::LoadPipeline()
     ThrowIfFailed(swapChain.As(&directX12_swapChain));
     directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex();
 
-    // 설명자 힙을 생성
+    // 설명자 힙을 생성 (cpu 가상 공간에 생성)
     {
         // 랜더 대상보기 설명자 힙 생성
-        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {}; //render target view 힙 
         rtvHeapDesc.NumDescriptors = FrameCount;  //스왑체인 버퍼 =프레임
         rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -134,7 +137,7 @@ void DirectX12EnginePipline::LoadPipeline()
 
         directX12_rtvDescriptorSize = directX12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc; //depth stencil veiew 힙 
         dsvHeapDesc.NumDescriptors = 1;
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -146,7 +149,7 @@ void DirectX12EnginePipline::LoadPipeline()
 
     // 프레임 리소스를 생성
     {
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(directX12_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(directX12_rtvHeap->GetCPUDescriptorHandleForHeapStart()); //cpu 가상 주소 공간에 생성
         //각 프레임에 대한 rtv를 생성
         for (UINT i = 0; i < FrameCount; ++i)
         {
@@ -169,8 +172,7 @@ void DirectX12EnginePipline::LoadAssets()
         IID_PPV_ARGS(&directX12_commandList)));
 
     // 커맨드 리스트는 레코딩 상태에서 생성되지만 아무것도 존재하지 않음 
-    // 레코드 상태에서 닫힐것을 예상함으로 지금 닫음.
-    // 이것은 재설정하고 닫아야 하는 것
+    // 레코드 상태에서 닫힐것을 예상함으로 지금 닫음.(재설정 해야됨)
     ThrowIfFailed(directX12_commandList->Close());
 
     // 동기화 객체 생성
@@ -200,7 +202,7 @@ void DirectX12EnginePipline::PopulateCommandList()
     // 백버퍼가 랜더 타겟으로 사용됨
     directX12_commandList->ResourceBarrier(1, &keep(CD3DX12_RESOURCE_BARRIER::Transition(directX12_renderTargets[directX12_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET)));
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(directX12_rtvHeap->GetCPUDescriptorHandleForHeapStart(), directX12_frameIndex, directX12_rtvDescriptorSize);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(directX12_rtvHeap->GetCPUDescriptorHandleForHeapStart(), directX12_frameIndex, directX12_rtvDescriptorSize); //cpu 가상주소 공간에 생성
 
     // 명령을 기록
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
@@ -228,5 +230,5 @@ void DirectX12EnginePipline::WaitForPreviousFrame()
         WaitForSingleObject(directX12_fenceEvent, INFINITE);
     }
 
-    directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex();
+    directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex(); //현재 백퍼 인덱스의 번호로 바꿔줌
 }
