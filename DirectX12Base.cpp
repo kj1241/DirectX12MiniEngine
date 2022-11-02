@@ -62,7 +62,7 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
     *ppAdapter = nullptr; // 어댑터 포인트 초기화
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<IDXGIFactory6> factory6;
-    if (SUCCEEDED(pFactory->8(IID_PPV_ARGS(&factory6)))) //팩토리에서 6버전을 지원하는지 검사
+    if (SUCCEEDED(pFactory->QueryInterface(IID_PPV_ARGS(&factory6)))) //팩토리에서 6버전을 지원하는지 검사
     {
         for (
             UINT adapterIndex = 0;  // 어뎁터 인덱스 번호 시작
