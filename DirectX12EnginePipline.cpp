@@ -164,6 +164,7 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
         }
     }
     ThrowIfFailed(directX12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&directX12_commandAllocator)));
+    ThrowIfFailed(directX12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, IID_PPV_ARGS(&directX12_bundleAllocator))); //번들 할당 함
 }
 
 void DirectX12EnginePipline::LoadAssets()
@@ -265,6 +266,17 @@ void DirectX12EnginePipline::LoadAssets()
         directX12_vertexBufferView.SizeInBytes = vertexBufferSize;
     }
 
+    // 번들을 만들고 기록
+    {
+        ThrowIfFailed(directX12_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, directX12_bundleAllocator.Get(), directX12_pipelineState.Get(), IID_PPV_ARGS(&directX12_bundle)));
+        directX12_bundle->SetGraphicsRootSignature(directX12_rootSignature.Get()); //그래픽스 루트 서명 설정
+        //업데이트에 있는 리스트를 가저옴
+        directX12_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);//기본 유형(점 선 면)데이터 순서
+        directX12_bundle->IASetVertexBuffers(0, 1, &directX12_vertexBufferView);//버텍스 버퍼에 대한 CPU 핸들 설정
+        directX12_bundle->DrawInstanced(3, 1, 0, 0); //인덱싱 되지 않은 인스턴스 프리미티브 그리기
+        ThrowIfFailed(directX12_bundle->Close());
+    }
+
     // 동기화 객체 생성
     {
         ThrowIfFailed(directX12_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&directX12_fence)));
@@ -305,10 +317,7 @@ void DirectX12EnginePipline::PopulateCommandList()
     // 명령을 기록(입력어셈블 단계)
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
     directX12_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr); // 랜더 타겟 뷰어 클리어
-    directX12_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);  //기본 유형(점 선 면)데이터 순서
-    directX12_commandList->IASetVertexBuffers(0, 1, &directX12_vertexBufferView); //버텍스 버퍼에 대한 CPU 핸들 설정
-    directX12_commandList->DrawInstanced(3, 1, 0, 0); //인덱싱 되지 않은 인스턴스 프리미티브 그리기
-
+    directX12_commandList->ExecuteBundle(directX12_bundle.Get());     //번들의 지정된 명령을 실행
 
     // 백버퍼에서 있던 내용을 화면으로 뿌려줌
     directX12_commandList->ResourceBarrier(1, &keep(CD3DX12_RESOURCE_BARRIER::Transition(directX12_renderTargets[directX12_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT)));

@@ -30,12 +30,14 @@ private:
     ComPtr<ID3D12Device> directX12_device;  //디바이스
     ComPtr<ID3D12Resource> directX12_renderTargets[FrameCount];  //랜더타겟(프레임카운트)
     ComPtr<ID3D12CommandAllocator> directX12_commandAllocator;  //커멘드 할당
+    ComPtr<ID3D12CommandAllocator> directX12_bundleAllocator; //번들 할당
     ComPtr<ID3D12CommandQueue> directX12_commandQueue; //커맨드 큐
     ComPtr<ID3D12RootSignature> directX12_rootSignature; //루트 서명
     ComPtr<ID3D12DescriptorHeap> directX12_rtvHeap; //rtv 힙
     ComPtr<ID3D12DescriptorHeap> directX12_dsvHeap; // dsv 힙
     ComPtr<ID3D12PipelineState> directX12_pipelineState; // 파이프라인 스테이트
     ComPtr<ID3D12GraphicsCommandList> directX12_commandList; // 커멘드 리스트
+    ComPtr<ID3D12GraphicsCommandList> directX12_bundle;  // 번들 만들기
     UINT directX12_rtvDescriptorSize = 0; // rtv 서술자 사이즈
     UINT directX12_dsvDescriptorSize = 0; // dsv 서술자 사이즈
 
