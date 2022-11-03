@@ -41,7 +41,7 @@ private:
 
     // æ€ ∏Æº“Ω∫
     ComPtr<ID3D12Resource> directX12_vertexBuffer;  
-    D3D12_VERTEX_BUFFER_VIEW directX12_vertexBufferView;
+    D3D12_VERTEX_BUFFER_VIEW directX12_vertexBufferView={};
 
     // µø±‚»≠ ∞¥√º
     UINT directX12_frameIndex = 0;  //«¡∑π¿” ¿Œ¥ÏΩ∫

@@ -2,7 +2,12 @@
 #include "DirectX12EnginePipline.h"
 
 //생성자
-DirectX12EnginePipline::DirectX12EnginePipline(UINT width, UINT height, std::wstring name):DirectX12Base(width, height, name),directX12_frameIndex(0),directX12_rtvDescriptorSize(0), directX12_fenceValue(0)
+DirectX12EnginePipline::DirectX12EnginePipline(UINT width, UINT height, std::wstring name):DirectX12Base(width, height, name),
+directX12_frameIndex(0),
+directX12_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
+directX12_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
+directX12_rtvDescriptorSize(0), 
+directX12_fenceValue(0)
 {
 }
 
@@ -163,7 +168,6 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
 
 void DirectX12EnginePipline::LoadAssets()
 {
-
     // 비어있는 루트서명만들기
     {
         CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc; //루트서명 정의
@@ -174,7 +178,6 @@ void DirectX12EnginePipline::LoadAssets()
         ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
         ThrowIfFailed(directX12_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&directX12_rootSignature)));
     }
-
 
     // 셰이더 컴파일 및 로드를 포함하는 파이프라인 만들기
     {
@@ -187,32 +190,32 @@ void DirectX12EnginePipline::LoadAssets()
         UINT compileFlags = 0;
 #endif
 
-        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../shaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr)); //버텍스 셰이더에 hlsl VSMain 담기
+        ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"../../shaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));  //픽셀 셰이더 PSMain 담기
 
         // 정점 입력 레이아웃 정의
         D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, //위치
+            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } //색상
         };
 
         // PSO(그래픽스 파이프라인 상태 오브젝트)를 설명하고 생성
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-        psoDesc.pRootSignature = directX12_rootSignature.Get();
-        psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-        psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-        psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-        psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        psoDesc.DepthStencilState.DepthEnable = FALSE;
-        psoDesc.DepthStencilState.StencilEnable = FALSE;
-        psoDesc.SampleMask = UINT_MAX;
-        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.NumRenderTargets = 1;
-        psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        psoDesc.SampleDesc.Count = 1;
-        ThrowIfFailed(directX12_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&directX12_pipelineState)));
+        psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) }; //GPU 프론트 엔드 레이아웃
+        psoDesc.pRootSignature = directX12_rootSignature.Get(); //루트 시그널 포인트
+        psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get()); // 버텍스 셰이더
+        psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get()); //픽셀 셰이더
+        psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT); // 레스터 라이즈: 기본
+        psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT); // 블랜드 상태: 기본
+        psoDesc.DepthStencilState.DepthEnable = FALSE;  //뎁스: 불가
+        psoDesc.DepthStencilState.StencilEnable = FALSE; //스텐실: 불가
+        psoDesc.SampleMask = UINT_MAX; //블랜드 상태의 멀티 셈플링 32개(bit)로 최대
+        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; //기본도형의 구조(테셀레이터) 삼각형
+        psoDesc.NumRenderTargets = 1; //랜더 갯수
+        psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; //랜더 대상의 형틀
+        psoDesc.SampleDesc.Count = 1; //멀티셈플림 표본 품질의 갯수 1개
+        ThrowIfFailed(directX12_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&directX12_pipelineState))); //그래픽 파이프라인 상태 만들기
     }
 
    
@@ -249,7 +252,7 @@ void DirectX12EnginePipline::LoadAssets()
             nullptr,
             IID_PPV_ARGS(&directX12_vertexBuffer)));
 
-        // 삼각형 데이터를 버테스 버퍼에 복사합니다.
+        // 삼각형 데이터를 버텍스 버퍼에 복사합니다.
         UINT8* pVertexDataBegin;
         CD3DX12_RANGE readRange(0, 0);        // CPU에서 이 리소스를 읽지 않는다
         ThrowIfFailed(directX12_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
@@ -288,14 +291,24 @@ void DirectX12EnginePipline::PopulateCommandList()
     // 특정명령에서 ExecuteCommandList() 호출되면, 해당 커맨드 리스트는 재설정 해야 함으로 다시 레코딩
     ThrowIfFailed(directX12_commandList->Reset(directX12_commandAllocator.Get(), directX12_pipelineState.Get()));
 
+    // 필요한 상태를 설정
+    directX12_commandList->SetGraphicsRootSignature(directX12_rootSignature.Get()); //그래픽스 루트 서명 설정
+    directX12_commandList->RSSetViewports(1, &directX12_viewport); // 뷰포트 설정
+    directX12_commandList->RSSetScissorRects(1, &directX12_scissorRect); // 화면 자르는 크기 설정
+
     // 백버퍼가 랜더 타겟으로 사용됨
     directX12_commandList->ResourceBarrier(1, &keep(CD3DX12_RESOURCE_BARRIER::Transition(directX12_renderTargets[directX12_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET)));
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(directX12_rtvHeap->GetCPUDescriptorHandleForHeapStart(), directX12_frameIndex, directX12_rtvDescriptorSize); //cpu 가상주소 공간에 생성
+    directX12_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr); // 랜더 타겟 설정
 
-    // 명령을 기록
+    // 명령을 기록(입력어셈블 단계)
     const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
-    directX12_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    directX12_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr); // 랜더 타겟 뷰어 클리어
+    directX12_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);  //기본 유형(점 선 면)데이터 순서
+    directX12_commandList->IASetVertexBuffers(0, 1, &directX12_vertexBufferView); //버텍스 버퍼에 대한 CPU 핸들 설정
+    directX12_commandList->DrawInstanced(3, 1, 0, 0); //인덱싱 되지 않은 인스턴스 프리미티브 그리기
+
 
     // 백버퍼에서 있던 내용을 화면으로 뿌려줌
     directX12_commandList->ResourceBarrier(1, &keep(CD3DX12_RESOURCE_BARRIER::Transition(directX12_renderTargets[directX12_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT)));
