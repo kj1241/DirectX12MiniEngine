@@ -29,7 +29,7 @@ private:
     ComPtr<IDXGISwapChain3> directX12_swapChain;  //스왑체인 백버퍼 -> 프론트버퍼
     ComPtr<ID3D12Device> directX12_device;  //디바이스
     ComPtr<ID3D12Resource> directX12_renderTargets[FrameCount];  //랜더타겟(프레임카운트)
-    ComPtr<ID3D12CommandAllocator> directX12_commandAllocator;  //커멘드 할당
+    ComPtr<ID3D12CommandAllocator> directX12_commandAllocator[FrameCount];  //커멘드 할당
     ComPtr<ID3D12CommandAllocator> directX12_bundleAllocator; //번들 할당
     ComPtr<ID3D12CommandQueue> directX12_commandQueue; //커맨드 큐
     ComPtr<ID3D12RootSignature> directX12_rootSignature; //루트 서명
@@ -49,7 +49,7 @@ private:
     UINT directX12_frameIndex = 0;  //프레임 인댁스
     HANDLE directX12_fenceEvent = nullptr;  //팬스 이벤트
     ComPtr<ID3D12Fence> directX12_fence; // 팬스
-    UINT64 directX12_fenceValue = 0; // 팬스 값
+    UINT64 directX12_fenceValue[FrameCount]; // 팬스 값
 
     //싱글톤
     static DirectX12EnginePipline* s_app;
@@ -58,4 +58,6 @@ private:
     void LoadAssets();  //파이프라인 에셋
     void PopulateCommandList(); // 커멘드 리스트 마들기
     void WaitForPreviousFrame(); //이전 프레임 대기(나중에 지울꺼)
+    void MoveToNextFrame();
+    void WaitForGpu();
 };

@@ -7,7 +7,7 @@ directX12_frameIndex(0),
 directX12_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 directX12_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 directX12_rtvDescriptorSize(0), 
-directX12_fenceValue(0)
+directX12_fenceValue{} //directX12_fenceValue(0)-> directX12_fenceValue{} 배열로 변경
 {
 }
 
@@ -41,7 +41,9 @@ void DirectX12EnginePipline::OnRender()
     // 프레임 제시
     ThrowIfFailed(directX12_swapChain->Present(1, 0));
 
-    WaitForPreviousFrame();
+    //다음 프레임으로 이동
+    //WaitForPreviousFrame();
+    MoveToNextFrame();
 }
 
 void DirectX12EnginePipline::OnDestroy()
@@ -161,9 +163,11 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
             ThrowIfFailed(directX12_swapChain->GetBuffer(i, IID_PPV_ARGS(&directX12_renderTargets[i])));
             directX12_device->CreateRenderTargetView(directX12_renderTargets[i].Get(), nullptr, rtvHandle);
             rtvHandle.Offset(1, directX12_rtvDescriptorSize);
+
+            ThrowIfFailed(directX12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&directX12_commandAllocator[i])));
         }
     }
-    ThrowIfFailed(directX12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&directX12_commandAllocator)));
+
     ThrowIfFailed(directX12_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, IID_PPV_ARGS(&directX12_bundleAllocator))); //번들 할당 함
 }
 
@@ -224,7 +228,7 @@ void DirectX12EnginePipline::LoadAssets()
     ThrowIfFailed(directX12_device->CreateCommandList(
         0, 
         D3D12_COMMAND_LIST_TYPE_DIRECT, 
-        directX12_commandAllocator.Get(),  // 관련 명령 할당자
+        directX12_commandAllocator[directX12_frameIndex].Get(),  // 관련 명령 할당자
         directX12_pipelineState.Get(), //초기 파이프라인 상태 오브젝트(nullptr -> directX12_pipelineState.Get())
         IID_PPV_ARGS(&directX12_commandList)));
 
@@ -277,10 +281,11 @@ void DirectX12EnginePipline::LoadAssets()
         ThrowIfFailed(directX12_bundle->Close());
     }
 
-    // 동기화 객체 생성
+    // 동기화 객체 생성후 GPU에 업로드 될떄까지 기다림
     {
-        ThrowIfFailed(directX12_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&directX12_fence)));
-        directX12_fenceValue = 1;
+        ThrowIfFailed(directX12_device->CreateFence(directX12_fenceValue[directX12_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&directX12_fence)));
+        //directX12_fenceValue[directX12_frameIndex] = 1;
+        directX12_fenceValue[directX12_frameIndex]++;
 
         // 프레임 동기화에 사용할 이벤트 핸들을 생성
         directX12_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -288,8 +293,10 @@ void DirectX12EnginePipline::LoadAssets()
         {
             ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
         }
-        
-        WaitForPreviousFrame();
+
+        //명령 목록이 실행될때까지 기다림 루프는 완료하지만 설정이 완료될떄까지 기다립니다.
+        //WaitForPreviousFrame();
+        WaitForGpu();
     }
 }
 
@@ -298,10 +305,10 @@ void DirectX12EnginePipline::PopulateCommandList()
     // 커맨드 리스트는 연결된 경우만 재설정 가능
     // 커멘드 리스트는 GPU처리를 완료했음으로 앱을 실행 
     // GPU처리를 위해 팬스 설정
-    ThrowIfFailed(directX12_commandAllocator->Reset());
+    ThrowIfFailed(directX12_commandAllocator[directX12_frameIndex]->Reset());
 
     // 특정명령에서 ExecuteCommandList() 호출되면, 해당 커맨드 리스트는 재설정 해야 함으로 다시 레코딩
-    ThrowIfFailed(directX12_commandList->Reset(directX12_commandAllocator.Get(), directX12_pipelineState.Get()));
+    ThrowIfFailed(directX12_commandList->Reset(directX12_commandAllocator[directX12_frameIndex].Get(), directX12_pipelineState.Get()));
 
     // 필요한 상태를 설정
     directX12_commandList->SetGraphicsRootSignature(directX12_rootSignature.Get()); //그래픽스 루트 서명 설정
@@ -325,21 +332,57 @@ void DirectX12EnginePipline::PopulateCommandList()
     ThrowIfFailed(directX12_commandList->Close());
 }
 
+//MoveToNextFrame사용으로 더이상 함수를 사용하지 않음
 void DirectX12EnginePipline::WaitForPreviousFrame()
 {
-    //완료할때 까지 기다림
+    ////완료할때 까지 기다림
 
-    // 시그널 보내면서 팬스값 증가
-    const UINT64 fence = directX12_fenceValue;
-    ThrowIfFailed(directX12_commandQueue->Signal(directX12_fence.Get(), fence));
-    directX12_fenceValue++;
+    //// 시그널 보내면서 팬스값 증가
+    //const UINT64 fence = directX12_fenceValue;
+    //ThrowIfFailed(directX12_commandQueue->Signal(directX12_fence.Get(), fence));
+    //directX12_fenceValue++;
 
-    // 프레임 완료될때까지 기다림
-    if (directX12_fence->GetCompletedValue() < fence)
+    //// 프레임 완료될때까지 기다림
+    //if (directX12_fence->GetCompletedValue() < fence)
+    //{
+    //    ThrowIfFailed(directX12_fence->SetEventOnCompletion(fence, directX12_fenceEvent));
+    //    WaitForSingleObject(directX12_fenceEvent, INFINITE);
+    //}
+
+    //directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex(); //현재 백퍼 인덱스의 번호로 바꿔줌
+}
+
+// 보류죽인 GPU 작업이 완료될때까지 기다림
+void DirectX12EnginePipline::WaitForGpu()
+{
+    // 커멘드 큐에서 시그널 신호를 예약
+    ThrowIfFailed(directX12_commandQueue->Signal(directX12_fence.Get(), directX12_fenceValue[directX12_frameIndex]));
+
+    // 펜스가 처리될때까지 기다림
+    ThrowIfFailed(directX12_fence->SetEventOnCompletion(directX12_fenceValue[directX12_frameIndex], directX12_fenceEvent));
+    WaitForSingleObjectEx(directX12_fenceEvent, INFINITE, FALSE);
+
+    // 처리가 완료되면 현재 프레임의 팬스 값을증가시킴
+    directX12_fenceValue[directX12_frameIndex]++;
+}
+
+// 다음 프레임 랜더링을 준비
+void DirectX12EnginePipline::MoveToNextFrame()
+{
+    // 대기열에서 커멘드 큐에 시그널 명령을 예약
+    const UINT64 currentFenceValue = directX12_fenceValue[directX12_frameIndex]; //현재 값을 정의
+    ThrowIfFailed(directX12_commandQueue->Signal(directX12_fence.Get(), currentFenceValue)); //핸재 값을 대기열에 예약
+
+    // 프레임 인덱스를 업데이트
+    directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex(); //백버퍼의 마지막 버퍼를 프레임인덱스로
+
+    // 아직 프레임 랜더링할 준비가 안되있어 있다면 기다리기
+    if (directX12_fence->GetCompletedValue() < directX12_fenceValue[directX12_frameIndex])
     {
-        ThrowIfFailed(directX12_fence->SetEventOnCompletion(fence, directX12_fenceEvent));
-        WaitForSingleObject(directX12_fenceEvent, INFINITE);
+        ThrowIfFailed(directX12_fence->SetEventOnCompletion(directX12_fenceValue[directX12_frameIndex], directX12_fenceEvent));
+        WaitForSingleObjectEx(directX12_fenceEvent, INFINITE, FALSE);
     }
 
-    directX12_frameIndex = directX12_swapChain->GetCurrentBackBufferIndex(); //현재 백퍼 인덱스의 번호로 바꿔줌
+    // 다음 프레임의 팬스값을 설정
+    directX12_fenceValue[directX12_frameIndex] = currentFenceValue + 1;
 }
