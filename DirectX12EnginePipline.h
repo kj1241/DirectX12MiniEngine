@@ -22,6 +22,14 @@ private:
         XMFLOAT4 color;
     };
 
+    struct SceneConstantBuffer
+    {
+        XMFLOAT4 offset;
+        float padding[60];//상수 버퍼가 256바이트로정렬되도록 패딩합니다.
+    };
+
+    static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "상수버퍼는 256바이트로 정렬되어야 합니다.");
+
     // 파이프라인 객체
     CD3DX12_VIEWPORT directX12_viewport;
     CD3DX12_RECT directX12_scissorRect;
@@ -35,6 +43,7 @@ private:
     ComPtr<ID3D12RootSignature> directX12_rootSignature; //루트 서명
     ComPtr<ID3D12DescriptorHeap> directX12_rtvHeap; //rtv 힙
     ComPtr<ID3D12DescriptorHeap> directX12_dsvHeap; // dsv 힙
+    ComPtr<ID3D12DescriptorHeap> directX12_cbvHeap;  // csv 힙
     ComPtr<ID3D12PipelineState> directX12_pipelineState; // 파이프라인 스테이트
     ComPtr<ID3D12GraphicsCommandList> directX12_commandList; // 커멘드 리스트
     ComPtr<ID3D12GraphicsCommandList> directX12_bundle;  // 번들 만들기
@@ -44,6 +53,10 @@ private:
     // 앱 리소스
     ComPtr<ID3D12Resource> directX12_vertexBuffer;  
     D3D12_VERTEX_BUFFER_VIEW directX12_vertexBufferView={};
+
+    ComPtr<ID3D12Resource> directX12_constantBuffer;
+    SceneConstantBuffer directX12_constantBufferData;
+    std::unique_ptr<UINT8> directX12_pCbvDataBegin; //원래 스마트포인트가 별로지만 연습용으로 쓰기
 
     // 동기화 객체
     UINT directX12_frameIndex = 0;  //프레임 인댁스

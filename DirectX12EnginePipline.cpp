@@ -7,13 +7,20 @@ directX12_frameIndex(0),
 directX12_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 directX12_scissorRect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 directX12_rtvDescriptorSize(0), 
-directX12_fenceValue{} //directX12_fenceValue(0)-> directX12_fenceValue{} 배열로 변경
+directX12_fenceValue{}, //directX12_fenceValue(0)-> directX12_fenceValue{} 배열로 변경
+
+directX12_constantBufferData{},
+directX12_pCbvDataBegin(nullptr) //스마트 포인트 이니셜라이즈
 {
 }
 
 //소멸자
 DirectX12EnginePipline::~DirectX12EnginePipline()
 {
+    directX12_constantBuffer->Unmap(0, nullptr); //상수 버퍼 맵 해제
+
+    ////스마트포인트 메모리 제거 안됬다면 가비지 컬렉터 부르기 위해서 널포인트로 만들기
+    directX12_pCbvDataBegin.release();
 }
 
 //초기화
@@ -26,6 +33,15 @@ void DirectX12EnginePipline::OnInit()
 //업데이트
 void DirectX12EnginePipline::OnUpdate()
 {
+    const float translationSpeed = 0.005f;
+    const float offsetBounds = 1.25f;
+
+    directX12_constantBufferData.offset.x += translationSpeed;
+    if (directX12_constantBufferData.offset.x > offsetBounds)
+    {
+        directX12_constantBufferData.offset.x = -offsetBounds;
+    }
+    memcpy(directX12_pCbvDataBegin.get(), &directX12_constantBufferData, sizeof(directX12_constantBufferData));
 }
 
 //랜더링
@@ -49,7 +65,7 @@ void DirectX12EnginePipline::OnRender()
 void DirectX12EnginePipline::OnDestroy()
 {
     //gpu가 더이상 리소스를 참조하지 않는지 확인 
-    WaitForPreviousFrame();
+    MoveToNextFrame();
     CloseHandle(directX12_fenceEvent);
 }
 
@@ -144,7 +160,17 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
 
         directX12_rtvDescriptorSize = directX12_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc; //depth stencil veiew 힙 
+        //상수 버퍼 설명자 힙 생성
+        //그래픽스 파이프라인에 설명자 힙을 바인딩 시킴 여기에 포함된 디스크립터는 루트테이블에서 참조할 수 있음
+        D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+        cbvHeapDesc.NumDescriptors = 1;
+        cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+        ThrowIfFailed(directX12_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&directX12_cbvHeap)));
+
+
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {}; //depth stencil veiew 힙 
         dsvHeapDesc.NumDescriptors = 1;
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
@@ -173,16 +199,51 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
 
 void DirectX12EnginePipline::LoadAssets()
 {
-    // 비어있는 루트서명만들기
+    // 단일 cbv가 있는 설명자 테이블로 구성된 루트서명을 만듬
     {
-        CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc; //루트서명 정의
-        rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+        //테스트용 버전
+        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+        if (FAILED(directX12_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+        {
+            featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+        }
+
+        CD3DX12_DESCRIPTOR_RANGE1 ranges[1] = {};
+        CD3DX12_ROOT_PARAMETER1 rootParameters[1] = {};
+
+        ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+        rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+        //입력 레이아웃을 허용하고 특정 파이프단계에서 불필요한 엑세스 거부
+        D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+            D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+            D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
 
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
-        ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+        ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
         ThrowIfFailed(directX12_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&directX12_rootSignature)));
     }
+    
+    //// 비어있는 루트서명만들기
+    //{
+    //    CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc; //루트서명 정의
+    //    rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+    //    ComPtr<ID3DBlob> signature;
+    //    ComPtr<ID3DBlob> error;
+    //    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+    //    ThrowIfFailed(directX12_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&directX12_rootSignature)));
+    //}
 
     // 셰이더 컴파일 및 로드를 포함하는 파이프라인 만들기
     {
@@ -270,6 +331,31 @@ void DirectX12EnginePipline::LoadAssets()
         directX12_vertexBufferView.SizeInBytes = vertexBufferSize;
     }
 
+    // 상수버퍼 생성
+    {
+        const UINT constantBufferSize = sizeof(SceneConstantBuffer);    //cb의 크기는 256바이트로 정렬
+
+        ThrowIfFailed(directX12_device->CreateCommittedResource(
+            &keep(CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD)),
+            D3D12_HEAP_FLAG_NONE,
+            &keep(CD3DX12_RESOURCE_DESC::Buffer(constantBufferSize)),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&directX12_constantBuffer)));
+
+        // 상수 버퍼뷰를 정의 하고 생성
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+        cbvDesc.BufferLocation = directX12_constantBuffer->GetGPUVirtualAddress();
+        cbvDesc.SizeInBytes = constantBufferSize;
+        directX12_device->CreateConstantBufferView(&cbvDesc, directX12_cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+        //상수버퍼를 매핑하고 초기화 이것을 해제하지않는 이유는 앱이 닫힐때동안 사용할꺼기 때문
+        CD3DX12_RANGE readRange(0, 0);        //cpu에서 이 리소스 안읽음
+        ThrowIfFailed(directX12_constantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&directX12_pCbvDataBegin)));
+        memcpy(directX12_pCbvDataBegin.get(), &directX12_constantBufferData, sizeof(directX12_constantBufferData));
+    }
+
+
     // 번들을 만들고 기록
     {
         ThrowIfFailed(directX12_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, directX12_bundleAllocator.Get(), directX12_pipelineState.Get(), IID_PPV_ARGS(&directX12_bundle)));
@@ -312,6 +398,11 @@ void DirectX12EnginePipline::PopulateCommandList()
 
     // 필요한 상태를 설정
     directX12_commandList->SetGraphicsRootSignature(directX12_rootSignature.Get()); //그래픽스 루트 서명 설정
+
+    ID3D12DescriptorHeap* ppHeaps[] = { directX12_cbvHeap.Get() };
+    directX12_commandList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+    
+    directX12_commandList->SetGraphicsRootDescriptorTable(0, directX12_cbvHeap->GetGPUDescriptorHandleForHeapStart());
     directX12_commandList->RSSetViewports(1, &directX12_viewport); // 뷰포트 설정
     directX12_commandList->RSSetScissorRects(1, &directX12_scissorRect); // 화면 자르는 크기 설정
 

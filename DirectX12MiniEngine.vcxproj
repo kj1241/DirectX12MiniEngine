@@ -139,6 +139,12 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="WinAPI.h" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
