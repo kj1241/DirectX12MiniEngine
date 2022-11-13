@@ -24,6 +24,27 @@ void DirectX12Base::OnKeyUp(UINT8) //키를 떘을때
 {
 }
 
+void DirectX12Base::CalculateFrameStats() //프레임 상태 계산
+{
+    static int frameCnt = 0; //프레임 카운트
+    static float timeElapsed = 0.0f; //경과된 시간
+
+    frameCnt++;
+    //1초동안 평균
+    if ((gameTimer.TotalTime() - timeElapsed) >= 1.0f)
+    {
+        fps = static_cast<float>(frameCnt); // fps = frameCnt / 1
+        mspf = 1000.0f / fps;
+
+        std::wstring text = L" fps: " + std::to_wstring(fps) + L" mspf: " + std::to_wstring(mspf);
+        SetCustomWindowText(text.c_str());
+
+        // 평균을위해 재설정
+        frameCnt = 0;
+        timeElapsed += 1.0f;
+    }
+}
+
 UINT DirectX12Base::GetWidth() const //넓이 얻어오기(변경금지)
 {
 	return directX12_width;
@@ -116,6 +137,26 @@ void DirectX12Base::GetHardwareAdapter(_In_ IDXGIFactory1* pFactory, _Outptr_res
 
 void DirectX12Base::SetCustomWindowText(LPCWSTR text) //윈도우 상태표시창 표현
 {
-	std::wstring windowText = directX12_title + L": " + text;  //유니코드
+    std::wstring windowText = directX12_title + L": " + text;
 	SetWindowText(WinAPI::GetHwnd(), windowText.c_str()); // 핸들값으로 윈도우 설정하기
+}
+
+void DirectX12Base::GameTimeReset()
+{
+    gameTimer.Reset();
+}
+
+void DirectX12Base::GameTimeStart()
+{
+    gameTimer.Start();
+}
+
+void DirectX12Base::GameTimeStop()
+{
+    gameTimer.Stop();
+}
+
+void DirectX12Base::GameTimeTick()
+{
+    gameTimer.Tick();
 }

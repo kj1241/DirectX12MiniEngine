@@ -142,6 +142,9 @@ void DirectX12EnginePipline::LoadPipeline()  //파이프라인 로드
         &swapChain
     ));
 
+
+
+
     // 전체화면 지원 안할꺼기 때문에.
     ThrowIfFailed(factory->MakeWindowAssociation(WinAPI::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 

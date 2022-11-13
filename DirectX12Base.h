@@ -1,6 +1,7 @@
 #pragma once
 #include "DirectX12Function.h"
 #include "WinAPI.h"
+#include "GameTimer.h"
 
 class DirectX12Base
 {
@@ -17,12 +18,19 @@ public:
     virtual void OnKeyDown(UINT8);// 매개변수 키값
     virtual void OnKeyUp(UINT8);// 매개변수 키값
 
+    void CalculateFrameStats(); //계산프래임상태
+
     // 접근자
     UINT GetWidth() const;  //넓이
     UINT GetHeight() const;  //높이
     const WCHAR* GetTitle() const;   //타이틀
 
     void ParseCommandLineArgs(_In_reads_(argc) WCHAR* argv[], int argc); //명령줄 인수 구분
+
+    void GameTimeReset();
+    void GameTimeStart();
+    void GameTimeStop();
+    void GameTimeTick();
 
 protected:
     std::wstring GetAssetFullPath(LPCWSTR assetName);
@@ -37,7 +45,13 @@ protected:
     // 어뎁터 정보
     bool directX12_useWarpDevice = false;
 
+    // 시간
+    GameTimer gameTimer; //게임타이머
+
 private:
+    float fps = 0;
+    float mspf = 0;
+
     std::wstring directX12_assetsPath;  // 루트자산경로 
     std::wstring directX12_title;  // 윈도우 타이틀
 };

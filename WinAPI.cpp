@@ -58,6 +58,8 @@ int WinAPI::Run(DirectX12Base* pDirectX)
 {
     // 메인 루프
     MSG msg = { 0 };
+    pDirectX->GameTimeReset();
+
     while (msg.message != WM_QUIT) //메시지가 winAPI종료가 아니라면
     {
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) // 메시지가 있으면 처리
@@ -67,6 +69,9 @@ int WinAPI::Run(DirectX12Base* pDirectX)
         }
         else //그렇지 않으면 에니메이션/게임 작업을 수행
         {
+            pDirectX->GameTimeTick();
+
+            pDirectX->CalculateFrameStats();
             pDirectX->OnUpdate(); //업데이트
             pDirectX->OnRender(); //랜더링
         }
