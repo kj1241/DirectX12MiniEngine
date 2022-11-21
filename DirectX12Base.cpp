@@ -2,7 +2,7 @@
 #include "DirectX12Base.h"
 
 //생성자
-DirectX12Base::DirectX12Base(UINT width, UINT height, std::wstring name) : directX12_width(width), directX12_height(height), directX12_title(name), directX12_useWarpDevice(false)
+DirectX12Base::DirectX12Base(UINT width, UINT height, std::wstring name) : directX12_width(width), directX12_height(height), directX12_title(name), directX12_useWarpDevice(false) , frameCnt(0), timeElapsed(0.0f)
 {
 	WCHAR assetsPath[512];
 	GetAssetsPath(assetsPath, _countof(assetsPath)); //위치 알아내기
@@ -26,9 +26,6 @@ void DirectX12Base::OnKeyUp(UINT8) //키를 떘을때
 
 void DirectX12Base::CalculateFrameStats() //프레임 상태 계산
 {
-    static int frameCnt = 0; //프레임 카운트
-    static float timeElapsed = 0.0f; //경과된 시간
-
     frameCnt++;
     //1초동안 평균
     if ((gameTimer.TotalTime() - timeElapsed) >= 1.0f)

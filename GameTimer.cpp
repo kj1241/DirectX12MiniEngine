@@ -1,12 +1,10 @@
 #include "stdafx.h"
 #include "GameTimer.h"
 
-
-
 GameTimer::GameTimer() : secondsPerCount(0.0), deltaTime(-1.0), baseTime(0),pausedTime(0), prevTime(0), currTime(0),stopTime(0), bStopTime(false)
 {
 	long long int countsPerSec=0;
-	QueryPerformanceFrequency((LARGE_INTEGER*)&countsPerSec);  //프로그램 속도 측정
+	QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER *>(&countsPerSec));  //프로그램 속도 측정
 	secondsPerCount = 1.0 / static_cast<double>(countsPerSec);
 }
 
@@ -18,7 +16,7 @@ float GameTimer::TotalTime() const
 {
 	if (bStopTime) //만약 중지되어있다면
 		return static_cast<float>(((stopTime - pausedTime) - baseTime) * secondsPerCount);
-	
+
 	return static_cast<float>(((currTime - pausedTime) - baseTime) * secondsPerCount);
 }
 
@@ -51,7 +49,6 @@ void GameTimer::Start()
 		stopTime = 0;  // 정지시간
 		bStopTime = false; //멈춤 해제
 	}
-
 }
 
 void GameTimer::Stop()
@@ -85,7 +82,6 @@ void GameTimer::Tick()
 	{
 		deltaTime = 0.0;
 	}
-
 }
 
 

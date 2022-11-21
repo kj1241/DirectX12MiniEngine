@@ -54,4 +54,7 @@ private:
 
     std::wstring directX12_assetsPath;  // 루트자산경로 
     std::wstring directX12_title;  // 윈도우 타이틀
+
+    int frameCnt = 0; //프레임 카운트
+    float timeElapsed = 0.0f; //경과된 시간
 };

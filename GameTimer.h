@@ -25,5 +25,4 @@ private:
 
 	double secondsPerCount; //초당카운트 
 	double deltaTime;  //변위시간
-
 };
