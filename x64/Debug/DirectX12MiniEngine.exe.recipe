@@ -9,6 +9,9 @@
     <ContentFile>
       <FullPath>C:\Users\Mr_K\Desktop\DirectX12\DirectX12MiniEngine\x64\Debug\shaders.cso</FullPath>
     </ContentFile>
+    <ContentFile>
+      <FullPath>C:\Users\Mr_K\Desktop\DirectX12\DirectX12MiniEngine\x64\Debug\TextShaders.cso</FullPath>
+    </ContentFile>
   </ContentFiles>
   <SatelliteDlls />
   <NonRecipeFileRefs />

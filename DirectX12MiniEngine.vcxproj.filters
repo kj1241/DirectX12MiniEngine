@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="헤더 파일\FontUI">
+      <UniqueIdentifier>{16936606-da79-4eac-92d9-bc8540b49f7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\FontUI">
+      <UniqueIdentifier>{e7c70ea3-aa2a-4662-b351-086d839048b4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -24,13 +30,16 @@
     <ClCompile Include="DirectX12Base.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="DirectX12EnginePipline.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="GameTimer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="DirectX12UI.cpp">
+      <Filter>소스 파일\FontUI</Filter>
+    </ClCompile>
+    <ClCompile Include="BMFontUI.cpp">
+      <Filter>소스 파일\FontUI</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectX12EnginePipline.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,18 +56,27 @@
     <ClInclude Include="DirectX12EnginePipline.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="DirectX12Function.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="GameTimer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="DirectX12UI.h">
+      <Filter>헤더 파일\FontUI</Filter>
+    </ClInclude>
+    <ClInclude Include="BMFontUI.h">
+      <Filter>헤더 파일\FontUI</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectX12Function.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders.hlsl">
+      <Filter>리소스 파일</Filter>
+    </FxCompile>
+    <FxCompile Include="TextShaders.hlsl">
       <Filter>리소스 파일</Filter>
     </FxCompile>
   </ItemGroup>

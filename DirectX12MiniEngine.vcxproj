@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BMFontUI.cpp" />
     <ClCompile Include="DirectX12Base.cpp" />
     <ClCompile Include="DirectX12EnginePipline.cpp" />
     <ClCompile Include="DirectX12UI.cpp" />
@@ -135,16 +136,25 @@
     <ClCompile Include="WinAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BMFontUI.h" />
     <ClInclude Include="DirectX12Base.h" />
     <ClInclude Include="DirectX12EnginePipline.h" />
     <ClInclude Include="DirectX12Function.h" />
     <ClInclude Include="DirectX12UI.h" />
     <ClInclude Include="GameTimer.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="WinAPI.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders.hlsl">
+      <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PSMain</EntryPointName>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="TextShaders.hlsl">
+      <FileType>Document</FileType>
       <EntryPointName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PSMain</EntryPointName>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
     </FxCompile>

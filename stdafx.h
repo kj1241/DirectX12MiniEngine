@@ -11,6 +11,8 @@
 #include <D3Dcompiler.h> //d3d 컴파일러
 #include <DirectXMath.h> //DirectX Math 함수를 사용하기위해서
 #include <wrl.h> //Microsoft 사용을 위해서
+#include <fstream>
+#include <wincodec.h>
 #include "d3dx12.h"
 
 using namespace DirectX;
