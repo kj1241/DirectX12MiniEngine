@@ -1,8 +1,5 @@
 # DirectX12MiniEngine tutorial
-# 당분간 깃허브 폐쇠합니다(튜토리얼 형식 혜쇠 이악물고 퀄리티업)
-
-
-
+# 튜토리얼 형식 폐쇠/ 당분간 깃허브 폐쇠합니다(이악물고 퀄리티업 주간)
 
 
 #### (Sorry, this project just only KR) 개인적으로 DIrectX 학습용 프로젝트 입니다.
